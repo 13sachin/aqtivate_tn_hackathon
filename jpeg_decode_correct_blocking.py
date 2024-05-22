@@ -5,10 +5,21 @@ from scipy.fft import idct
 import pickle
 from jpeg_encode import NodeTree
 
-def bytes_to_binary_string(byte_data, original_length):
-    binary_string_padded = ''.join(format(byte, '08b') for byte in byte_data)
-    return binary_string_padded[:original_length]
+#------------------- Functions for Huffman decoding -------------------
+def decode_huffman(encoded, huff_tree):
+    decoded = ''
+    tmp = ''
+    tmp_list = list(huff_tree.values())
+    for c in encoded:
+        tmp += c
+        if tmp in tmp_list:
+            decoded += list(huff_tree.keys())[tmp_list.index(tmp)]
+            tmp = ''
+        
+    return decoded
+#----------------------------------------------------------------------
 
+#------------------- Functions for RLE --------------------------------
 def split_after_every_second_occurrence(s, char):
     result = []
     count = 0
@@ -27,18 +38,6 @@ def split_after_every_second_occurrence(s, char):
         result.append(s[start:])
     
     return result
-
-def decode_huffman(encoded, huff_tree):
-    decoded = ''
-    tmp = ''
-    tmp_list = list(huff_tree.values())
-    for c in encoded:
-        tmp += c
-        if tmp in tmp_list:
-            decoded += list(huff_tree.keys())[tmp_list.index(tmp)]
-            tmp = ''
-        
-    return decoded
 
 def split_blocks(encoded):
     encoded = encoded.split('(0,0)')[:-1]
@@ -81,7 +80,12 @@ def decode_rle(encoded):
         decoded.append(res)
 
     return decoded
+#----------------------------------------------------------------------
 
+#------------------- Functions for Transformations ---------------------------------------------------------------
+def bytes_to_binary_string(byte_data, original_length):
+    binary_string_padded = ''.join(format(byte, '08b') for byte in byte_data)
+    return binary_string_padded[:original_length]
 
 def zagzig(l):
     blocksize=int(np.sqrt(len(l)))
@@ -114,15 +118,41 @@ def zagzig(l):
     
     return block
 
-def unblock(M, width, height, bsize):
-    res = []
-    for i in range(height//bsize):
-        ires = []
-        for j in range(width//bsize):
-            ires.append(M[i*width//bsize+j])
-        res.append(ires)
-    res = np.block(res)
-    return res
+def QM(bsize):
+    if bsize==8:
+        return np.array([
+            [16, 11, 10, 16, 24, 40, 51, 61],
+            [12, 12, 14, 19, 26, 58, 60, 55],
+            [14, 13, 16, 24, 40, 57, 69, 56],
+            [14, 17, 22, 29, 51, 87, 80, 62],
+            [18, 22, 37, 56, 68, 109, 103, 77],
+            [24, 35, 55, 64, 81, 104, 113, 92],
+            [49, 64, 78, 87, 103, 121, 120, 101],
+            [72, 92, 95, 98, 112, 100, 103, 99]])
+    if bsize==16:
+        return np.array([
+            [16, 11, 10, 16, 24, 40, 51, 61, 72, 80, 95, 100, 120, 130, 140, 150],
+            [12, 12, 14, 19, 26, 58, 60, 55, 62, 78, 85, 95, 105, 115, 125, 135],
+            [14, 13, 16, 24, 40, 57, 69, 56, 60, 70, 80, 90, 100, 110, 120, 130],
+            [14, 17, 22, 29, 51, 87, 80, 62, 65, 75, 85, 95, 105, 115, 125, 135],
+            [18, 22, 37, 56, 68, 109, 103, 77, 79, 85, 95, 105, 115, 125, 135, 145],
+            [24, 35, 55, 64, 81, 104, 113, 92, 95, 100, 110, 120, 130, 140, 150, 160],
+            [49, 64, 78, 87, 103, 121, 120, 101, 105, 110, 120, 130, 140, 150, 160, 170],
+            [72, 92, 95, 98, 112, 100, 103, 99, 105, 115, 125, 135, 145, 155, 165, 175],
+            [85, 95, 105, 110, 120, 125, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220],
+            [95, 105, 115, 120, 130, 135, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230],
+            [105, 115, 125, 130, 140, 145, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240],
+            [115, 125, 135, 140, 150, 155, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250],
+            [125, 135, 145, 150, 160, 165, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260],
+            [135, 145, 155, 160, 170, 175, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270],
+            [145, 155, 165, 170, 180, 185, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280],
+            [155, 165, 175, 180, 190, 195, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290]])
+
+def Fourier(block,typ):
+    if typ=='dct':
+        FT = idct(block.T, norm="ortho").T
+        FT = idct(FT, norm="ortho")
+        return FT
 
 def reassemble_matrix(blocks):
     # Get the number of blocks in each dimension
@@ -146,36 +176,11 @@ def reassemble_matrix(blocks):
             reassembled_matrix[i*block_height:(i+1)*block_height, j*block_width:(j+1)*block_width] = blocks[i][j]
     
     return reassembled_matrix
+#-----------------------------------------------------------------------------------------------------------------
 
-def QM(bsize):
-    if bsize==8:
-        return np.array([[16, 11, 10, 16, 24, 40, 51, 61], [12, 12, 14, 19, 26, 58, 60, 55], [14, 13, 16, 24, 40, 57, 69, 56], [14, 17, 22, 29, 51, 87, 80, 62], [18, 22, 37, 56, 68, 109, 103, 77], [24, 35, 55, 64, 81, 104, 113, 92], [49, 64, 78, 87, 103, 121, 120, 101], [72, 92, 95, 98, 112, 100, 103, 99]])
-    if bsize==16:
-        return np.array([
-    [16, 11, 10, 16, 24, 40, 51, 61, 72, 80, 95, 100, 120, 130, 140, 150],
-    [12, 12, 14, 19, 26, 58, 60, 55, 62, 78, 85, 95, 105, 115, 125, 135],
-    [14, 13, 16, 24, 40, 57, 69, 56, 60, 70, 80, 90, 100, 110, 120, 130],
-    [14, 17, 22, 29, 51, 87, 80, 62, 65, 75, 85, 95, 105, 115, 125, 135],
-    [18, 22, 37, 56, 68, 109, 103, 77, 79, 85, 95, 105, 115, 125, 135, 145],
-    [24, 35, 55, 64, 81, 104, 113, 92, 95, 100, 110, 120, 130, 140, 150, 160],
-    [49, 64, 78, 87, 103, 121, 120, 101, 105, 110, 120, 130, 140, 150, 160, 170],
-    [72, 92, 95, 98, 112, 100, 103, 99, 105, 115, 125, 135, 145, 155, 165, 175],
-    [85, 95, 105, 110, 120, 125, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220],
-    [95, 105, 115, 120, 130, 135, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230],
-    [105, 115, 125, 130, 140, 145, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240],
-    [115, 125, 135, 140, 150, 155, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250],
-    [125, 135, 145, 150, 160, 165, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260],
-    [135, 145, 155, 160, 170, 175, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270],
-    [145, 155, 165, 170, 180, 185, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280],
-    [155, 165, 175, 180, 190, 195, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290]
-])
 
-def Fourier(block,typ):
-    if typ=='dct':
-        FT = idct(block.T, norm="ortho").T
-        FT = idct(FT, norm="ortho")
-        return FT
 
+#-------------------- main code -------------------------------------------------
 with open('compressed_data.bin', 'rb') as file:
     data = pickle.load(file)
 
@@ -198,4 +203,4 @@ decoded = reassemble_matrix(decoded)
 image = Image.fromarray(decoded)
 image.show()
 image.save('image_reconstructed.png')
-
+#--------------------------------------------------------------------------------
