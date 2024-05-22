@@ -240,8 +240,6 @@ if __name__ == "__main__":
     for i in range(height//bsize):
         for j in range(width//bsize):
             tmp = Fourier(blocks[i,j],'dct')
-            tmp = dct(blocks[i,j], norm="ortho")
-            tmp = dct(tmp.T, norm="ortho").T
             tmp = np.round(tmp / qM).astype(int)
             tmp = zigzag(tmp)
             rle_blocks.append(rle(tmp, dc_now))
