@@ -210,9 +210,9 @@ def QM(bsize):
 
 def Fourier(block,typ):
     if typ=='dct':
-        tmp = dct(blocks, norm="ortho")
-        tmp = dct(tmp.T, norm="ortho").T
-        return tmp
+        FT = dct(block, norm="ortho")
+        FT = dct(FT.T, norm="ortho").T
+        return FT
 
 
 if __name__ == "__main__":

@@ -172,9 +172,9 @@ def QM(bsize):
 
 def Fourier(block,typ):
     if typ=='dct':
-        tmp = idct(block.T, norm="ortho").T
-        tmp = idct(tmp, norm="ortho")
-        return tmp
+        FT = idct(block.T, norm="ortho").T
+        FT = idct(FT, norm="ortho")
+        return FT
 
 with open('compressed_data.bin', 'rb') as file:
     data = pickle.load(file)
@@ -189,7 +189,7 @@ decoded = decode_huffman(encoded, huff_tree)
 decoded = decode_rle(decoded)
 for i, item in enumerate(decoded):
     tmp = zagzig(item) * qM
-    tmp = Fourier(item,'dct')
+    tmp = Fourier(tmp,'dct')
     decoded[i] = np.round(tmp).astype(int)
 
 decoded = np.array(decoded)
