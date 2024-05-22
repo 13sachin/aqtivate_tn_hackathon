@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image
 from scipy.fft import idct
 import pickle
-from jpeg_encode import NodeTree
+import qft_test as qft
 
 #------------------- Functions for Huffman decoding -------------------
 def decode_huffman(encoded, huff_tree):
@@ -148,11 +148,13 @@ def QM(bsize):
             [145, 155, 165, 170, 180, 185, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280],
             [155, 165, 175, 180, 190, 195, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290]])
 
-def Fourier(block,typ):
-    if typ=='dct':
+def Fourier(block,type):
+    if type == 'dct':
         FT = idct(block.T, norm="ortho").T
         FT = idct(FT, norm="ortho")
-        return FT
+    elif type == 'qft':
+        FT = qft.qft_vector(block)
+    return FT
 
 def reassemble_matrix(blocks):
     # Get the number of blocks in each dimension
@@ -194,7 +196,7 @@ decoded = decode_huffman(encoded, huff_tree)
 decoded = decode_rle(decoded)
 for i, item in enumerate(decoded):
     tmp = zagzig(item) * qM
-    tmp = Fourier(tmp,'dct')
+    tmp = Fourier(tmp,'qft')
     decoded[i] = np.round(tmp).astype(np.uint8)
 
 decoded = np.array(decoded)
