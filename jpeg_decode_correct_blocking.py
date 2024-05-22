@@ -190,7 +190,7 @@ decoded = decode_rle(decoded)
 for i, item in enumerate(decoded):
     tmp = zagzig(item) * qM
     tmp = Fourier(tmp,'dct')
-    decoded[i] = np.round(tmp).astype(int)
+    decoded[i] = np.round(tmp).astype(np.uint8)
 
 decoded = np.array(decoded)
 decoded = decoded.ravel().reshape((height//bsize, width//bsize, bsize, bsize))
