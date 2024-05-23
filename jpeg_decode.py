@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image
 from scipy.fft import idct
 import pickle
-import qft_test as qft
+#import qft_test
 
 #------------------- Functions for Huffman decoding -------------------
 def decode_huffman(encoded, huff_tree):
@@ -152,8 +152,8 @@ def Fourier(block,type):
     if type == 'dct':
         FT = idct(block.T, norm="ortho").T
         FT = idct(FT, norm="ortho")
-    elif type == 'qft':
-        FT = qft.qft_vector(block)
+    elif type == 'qft_vector':
+        FT = qft_vector(block)
     return FT
 
 def reassemble_matrix(blocks):
@@ -189,14 +189,13 @@ with open('compressed_data.bin', 'rb') as file:
 huff_tree = data[0]
 width, height, bsize = data[1]
 encoded = bytes_to_binary_string(data[2], data[3])
-#encoded = data[2]
 qM = QM(bsize)
 
 decoded = decode_huffman(encoded, huff_tree)
 decoded = decode_rle(decoded)
 for i, item in enumerate(decoded):
     tmp = zagzig(item) * qM
-    tmp = Fourier(tmp,'qft')
+    tmp = Fourier(tmp,'dct')
     decoded[i] = np.round(tmp).astype(np.uint8)
 
 decoded = np.array(decoded)
