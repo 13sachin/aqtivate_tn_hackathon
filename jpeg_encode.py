@@ -4,8 +4,8 @@ import numpy as np
 from PIL import Image
 from scipy.fft import dct, fft
 import pickle
-import time
-#import qft_test
+import pdb
+import qft_test as qft
 
 #------------------- Functions for Huffman encoding -------------------
 # Creating tree nodes
@@ -140,7 +140,8 @@ def Fourier(block,type):
         FT = fft(block, norm="ortho")
         FT = fft(FT.T, norm="ortho").T
     elif type == 'qft_vector':
-        FT = qft_vector(block)
+        FT = qft.qft_vector_encode(block)
+        FT = FT.real
     return FT
 
 def QM(bsize):

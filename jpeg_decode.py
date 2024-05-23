@@ -2,7 +2,7 @@ import numpy as np
 from PIL import Image
 from scipy.fft import idct, ifft
 import pickle
-#import qft_test
+import qft_test as qft
 
 #------------------- Functions for Huffman decoding -------------------
 def decode_huffman(encoded, huff_tree):
@@ -155,7 +155,8 @@ def Fourier(block,type):
         FT = ifft(block.T, norm="ortho").T
         FT = ifft(FT, norm="ortho")
     elif type == 'qft_vector':
-        FT = qft_vector(block)
+        FT = qft.qft_vector_decode(block)
+        FT = FT.real
     return FT
 
 def reassemble_matrix(blocks):
