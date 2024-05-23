@@ -5,7 +5,7 @@ from PIL import Image
 from scipy.fft import dct, fft
 import pickle
 import pdb
-#import qft_test
+import qft_test as qft
 
 #------------------- Functions for Huffman encoding -------------------
 # Creating tree nodes
@@ -139,7 +139,8 @@ def Fourier(block,type):
     elif type == 'fft':
         FT = fft(block, norm="ortho")
     elif type == 'qft_vector':
-        FT = qft_vector(block)
+        FT = qft.qft_vector_encode(block)
+        FT = FT.real
     return FT
 
 def QM(bsize):
