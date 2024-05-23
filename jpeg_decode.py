@@ -152,7 +152,8 @@ def Fourier(block,type):
         FT = idct(block.T, norm="ortho").T
         FT = idct(FT, norm="ortho")
     elif type == 'fft':
-        FT = ifft(block, norm="ortho")
+        FT = ifft(block.T, norm="ortho").T
+        FT = ifft(FT, norm="ortho")
     elif type == 'qft_vector':
         FT = qft_vector(block)
     return FT
@@ -207,5 +208,5 @@ decoded = decoded.ravel().reshape((height//bsize, width//bsize, bsize, bsize))
 decoded = reassemble_matrix(decoded)
 image = Image.fromarray(decoded)
 #image.show()
-image.save(f'data_reconstructed\\{filename}_{bsize}_reconstructed.png')
+image.save(f'data_reconstructed\\{filename}_{fourier_type}_{bsize}_reconstructed.png')
 #--------------------------------------------------------------------------------

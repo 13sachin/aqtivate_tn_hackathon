@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 from scipy.fft import dct, fft
 import pickle
-import pdb
+import time
 #import qft_test
 
 #------------------- Functions for Huffman encoding -------------------
@@ -138,6 +138,7 @@ def Fourier(block,type):
         FT = dct(FT.T, norm="ortho").T
     elif type == 'fft':
         FT = fft(block, norm="ortho")
+        FT = fft(FT.T, norm="ortho").T
     elif type == 'qft_vector':
         FT = qft_vector(block)
     return FT
@@ -239,15 +240,21 @@ if __name__ == "__main__":
     freq = {}
     rle_blocks = []
     dc_now = 0
-    
+    timings = []
+
     blocks = subdivide_matrix(original, bsize)
     for i in range(height//bsize):
         for j in range(width//bsize):
+            start = time.time()
             tmp = Fourier(blocks[i,j], args[1])
+            end = time.time()
             tmp = np.round(tmp / qM).astype(int)
             tmp = zigzag(tmp)
             rle_blocks.append(rle(tmp, dc_now))
             dc_now = tmp[0]
+            timings.append(end - start)
+    
+    timings = sum(timings)/len(timings)
 
     huffman, node_tree, freq = create_huffman_code(freq)
     test = ''
@@ -262,4 +269,8 @@ if __name__ == "__main__":
     data = [huffman, img_sizes, fourier_type, byte_data, byte_data_original_length, filename]
     with open('compressed_data.bin', 'wb') as file:
         pickle.dump(data, file, pickle.HIGHEST_PROTOCOL)
+
+    file_size = os.path.getsize('compressed_data.bin')
+    with open('compression_data.txt', 'a+') as f:
+        f.write(str(args[0]) + ' ' + str(args[1]) + ' ' + str(args[2]) + ' ' + str(file_size) + 'B' + ' ' + str(timings) + 's\n')
 #--------------------------------------------------------------------------------
