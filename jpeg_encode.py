@@ -1,12 +1,10 @@
-"""
-Example to read and write a png file with python
-"""
-
+import sys
 import os
 import numpy as np
 from PIL import Image
-from scipy.fft import dct
+from scipy.fft import dct, fft
 import pickle
+import pdb
 #import qft_test
 
 #------------------- Functions for Huffman encoding -------------------
@@ -74,6 +72,9 @@ def addToDict(item):
     else:
         freq[item] = 1
 
+def all_zeros_from_index(arr, index):
+    return all(x == 0 for x in arr[index:])
+
 def rle(b, dc):
     blocks = []
     start = b[0] - dc
@@ -100,11 +101,12 @@ def rle(b, dc):
             blocks.append(tmp1)
             blocks.append(tmp2)
             nzeros = 0
-        if i == b.size-1 and b[i] == 0:
+        if all_zeros_from_index(b, i) or i == b.size-1:
             end = f'(0,0)'
             addToDict(end)
             blocks.append(end)
-    return blocks
+            return blocks
+
 #---------------------------------------------------------
 
 #------------------- Functions for transformations ----------------------------------------------
@@ -134,6 +136,8 @@ def Fourier(block,type):
     if type == 'dct':
         FT = dct(block, norm="ortho")
         FT = dct(FT.T, norm="ortho").T
+    elif type == 'fft':
+        FT = fft(block, norm="ortho")
     elif type == 'qft_vector':
         FT = qft_vector(block)
     return FT
@@ -210,8 +214,14 @@ def binary_string_to_bytes(binary_string):
 #------------------------------------------------------------------------------------------------
 
 #-------------------- main code -------------------------------------------------
+args = [arg for arg in sys.argv[1:] if not arg.startswith("-")] #args[0] = filename, args[1] = Fouriertype, args[2] = bsize
+#args = [0, 0, 0]
+#args[0] = 'data\\couple.bmp'
+#args[1] = 'dct'
+#args[2] = 8
+
 if __name__ == "__main__":
-    filename = "data/couple.bmp"
+    filename = args[0]
 
     # Load image
     if os.path.isfile(filename):
@@ -221,7 +231,7 @@ if __name__ == "__main__":
 
     # Convert image to numpy array
     original = np.array(image)
-    bsize = 8
+    bsize = int(args[2])
     height = original.shape[0]
     width = original.shape[1]
     qM = QM(bsize)
@@ -233,18 +243,23 @@ if __name__ == "__main__":
     blocks = subdivide_matrix(original, bsize)
     for i in range(height//bsize):
         for j in range(width//bsize):
-            tmp = Fourier(blocks[i,j],'dct')
+            tmp = Fourier(blocks[i,j], args[1])
             tmp = np.round(tmp / qM).astype(int)
             tmp = zigzag(tmp)
             rle_blocks.append(rle(tmp, dc_now))
             dc_now = tmp[0]
 
     huffman, node_tree, freq = create_huffman_code(freq)
+    test = ''
+    for block in rle_blocks:
+        for item in block:
+            test += item
     encoding = encode(rle_blocks, huffman)
 
     byte_data, byte_data_original_length = binary_string_to_bytes(encoding)
     img_sizes = [width, height, bsize]
-    data = [huffman, img_sizes, byte_data, byte_data_original_length]
+    fourier_type = args[1]
+    data = [huffman, img_sizes, fourier_type, byte_data, byte_data_original_length, filename]
     with open('compressed_data.bin', 'wb') as file:
         pickle.dump(data, file, pickle.HIGHEST_PROTOCOL)
 #--------------------------------------------------------------------------------

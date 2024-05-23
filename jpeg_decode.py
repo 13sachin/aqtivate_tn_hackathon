@@ -1,7 +1,6 @@
-import os
 import numpy as np
 from PIL import Image
-from scipy.fft import idct
+from scipy.fft import idct, ifft
 import pickle
 #import qft_test
 
@@ -152,6 +151,8 @@ def Fourier(block,type):
     if type == 'dct':
         FT = idct(block.T, norm="ortho").T
         FT = idct(FT, norm="ortho")
+    elif type == 'fft':
+        FT = ifft(block, norm="ortho")
     elif type == 'qft_vector':
         FT = qft_vector(block)
     return FT
@@ -188,20 +189,23 @@ with open('compressed_data.bin', 'rb') as file:
 
 huff_tree = data[0]
 width, height, bsize = data[1]
-encoded = bytes_to_binary_string(data[2], data[3])
+fourier_type = data[2]
+encoded = bytes_to_binary_string(data[3], data[4])
+filename = data[5]
+filename = filename.split('\\')[1].split('.')[0]
 qM = QM(bsize)
 
 decoded = decode_huffman(encoded, huff_tree)
 decoded = decode_rle(decoded)
 for i, item in enumerate(decoded):
     tmp = zagzig(item) * qM
-    tmp = Fourier(tmp,'dct')
+    tmp = Fourier(tmp, fourier_type)
     decoded[i] = np.round(tmp).astype(np.uint8)
 
 decoded = np.array(decoded)
 decoded = decoded.ravel().reshape((height//bsize, width//bsize, bsize, bsize))
 decoded = reassemble_matrix(decoded)
 image = Image.fromarray(decoded)
-image.show()
-image.save('image_reconstructed.png')
+#image.show()
+image.save(f'data_reconstructed\\{filename}_{bsize}_reconstructed.png')
 #--------------------------------------------------------------------------------
