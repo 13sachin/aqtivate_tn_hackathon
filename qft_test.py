@@ -36,7 +36,7 @@ def build_qc_inverse(num_qubits):
     qc = QuantumCircuit(num_qubits)
     qft_rotations(qc, num_qubits)
     swap_registers(qc, num_qubits)
-    return qc.inverse
+    return qc.inverse()
 
 def run_qm_circuit(qc, mps):
     # Write down the quantum circuit. This GHZ state given by the qmatcha library is the "best"
@@ -111,95 +111,36 @@ def ket_encoding_zigzag(img):
     return l
 
 def ket_encoding_halfing(img):
-    ret = []
-    for i in range(len(64)):
-        i1 = i//2
-        i2 = (i%2)//2
-        j1 = ((i%2)%2)//2
-        j2 = (((i%2)%2)%2)//2
-        ret.append(img[2*i2+i1][2*j2+j1])
-    return np.array(ret)
+    pass
 
 def ket_to_mps(ket):
     n =int(np.log2(len(ket)))
     conv_params = TNConvergenceParameters(max_bond_dimension=64)
-    mps = MPS.from_statevector(ket.reshape([2]*n).reshape(-1, order="F"), conv_params=conv_params)
+    #ket = ket.reshape([2]*n).reshape(-1, order="F")
+    mps = MPS.from_statevector(ket, conv_params=conv_params)
     return mps
 
 def qft_vector_encode(block):
     bsize = block.shape[0]
-    ket = ket_encoding_vector(block)
+    ket = ket_encoding_vector(block).astype(complex)
     norm_value = np.sqrt(np.sum(ket**2))
+    #print(norm_value)
     norm_ket = ket / norm_value
     num_qubits = np.log2(np.shape(ket)[0])
     qc = build_qc(int(num_qubits))
     mps = ket_to_mps(norm_ket)
     results = run_qm_circuit(qc, mps)
-    results = results.tn_state.to_statevector(qiskit_order=True).elem * norm_value
-    return np.conjugate(results.reshape(bsize,bsize))
+    results = results.tn_state.to_statevector(qiskit_order=False).elem * norm_value
+    return results.reshape(bsize,bsize)
 
 def qft_vector_decode(block):
     bsize = block.shape[0]
-    ket = ket_encoding_vector(block)
+    ket = ket_encoding_vector(block).astype(complex)
     norm_value = np.sqrt(np.sum(ket**2))
     norm_ket = ket / norm_value
     num_qubits = np.log2(np.shape(ket)[0])
     qc = build_qc_inverse(int(num_qubits))
     mps = ket_to_mps(norm_ket)
     results = run_qm_circuit(qc, mps)
-    results = results.tn_state.to_statevector(qiskit_order=True).elem.real * norm_value
+    results = results.tn_state.to_statevector(qiskit_order=False).elem.real * norm_value
     return results.reshape(bsize,bsize)
-
-
-def qft_vector_strip(block):
-    #bsize = block.shape[0]
-    ket = ket_encoding_vector(block)
-    norm_value = np.sqrt(np.sum(ket**2))
-    norm_ket = ket / norm_value
-    num_qubits = np.log2(np.shape(ket)[0])
-    qc = build_qc(int(num_qubits))
-    mps = ket_to_mps(norm_ket)
-    results = run_qm_circuit(qc, mps)
-    results = results.tn_state.to_statevector(qiskit_order=True).elem.real * norm_value
-    return results#.reshape(bsize,bsize)
-
-
-def qft_2_iter(block):
-    bsize = block.shape[0]
-    ket = []
-    for j in range(bsize):
-        kket = np.ndarray.flatten(qft_vector_strip(block[j]))
-        ket.append(j)
-    ket = np.array(ket).T
-    ret = []
-    for i in range(bsize):
-        kket = np.ndarray.flatten(qft_vector_strip(ket[i]))
-        ret.append(i)
-    ret = np.array(ret).T
-    return ret
-
-
-def qft_zigzag(block):
-    ket = ket_encoding_zigzag(block)
-    norm_value = np.sqrt(np.sum(ket**2))
-    norm_ket = ket / norm_value
-    num_qubits = np.log2(np.shape(ket)[0])
-    qc = build_qc(int(num_qubits))
-    mps = ket_to_mps(norm_ket)
-    results = run_qm_circuit(qc, mps)
-    return results.tn_state.to_statevector(qiskit_order=True).elem.real * norm_value
-
-tblock1=np.array([[139,144,149,153,155,155,155,155],[144,151,153,156,159,156,156,156],[150,155,160,163,158,156,156,156],[159,161,162,160,160,159,159,159],[159,160,161,162,162,155,155,155],[161,161,161,161,160,157,157,157],[162,162,161,163,162,157,157,157],[162,162,161,161,163,158,158,158]])
-
-#print(tblock1)
-tblock2=qft_vector_encode(tblock1)
-print(tblock2)
-tblock3 = fft(np.ndarray.flatten(tblock1),norm="ortho").reshape((8,8))
-print(tblock3)
-print(tblock2-tblock3)
-#print(max(tblock2-tblock3))
-
-#print(len(list_blocks))
-#print(qft_vector(tblock2))
-
-#print(qft_zigzag(tblock1))
